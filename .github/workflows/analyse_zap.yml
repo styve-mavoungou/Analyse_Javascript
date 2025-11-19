@@ -1,4 +1,4 @@
-name: Analyse de Sécurié avec OWASP ZAP
+name: Analyse automatique avec OWASP ZAP
 
 on:
   push:
@@ -12,14 +12,14 @@ jobs:
   zap_scan:
     permissions: write-all
     runs-on: ubuntu-latest
-    name: Scan the Web Application
+    name: Scan Application Web
 
     steps:
       # 1. Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Installer Node.js
+      # 2. Installer Node
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -29,34 +29,39 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # 4. Démarrer le serveur
-      - name: Start Server
-        run: npm start &
+      # 4. Créer le dossier DB (CRUCIAL : Sinon le serveur plante au démarrage)
+      - name: Create DB Directory
+        run: mkdir -p db
 
-      # 5. Attendre que le serveur soit prêt
+      # 5. Démarrer le serveur en arrière-plan (CORRECTION DU BLOCAGE)
+      # "nohup" permet au serveur de continuer à tourner même si le terminal se ferme
+      # "&" le met en arrière-plan
+      # "> server.log 2>&1" redirige les erreurs dans un fichier pour ne pas bloquer
+      - name: Start Server
+        run: nohup npm start > server.log 2>&1 &
+
+      # 6. Attendre que le port 3000 soit ouvert
+      # On met un timeout de 60 secondes. Si ça dépasse, ça s'arrête (au lieu de tourner 10 min)
       - name: Wait for server
         run: |
           npm install -g wait-on
-          npx wait-on http://localhost:3000
+          npx wait-on -t 60000 http://localhost:3000
 
-      # 6. Lancer le scan ZAP avec génération de rapports
+      # 7. Lancer ZAP
       - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:3000'
-          # OPTIONS AJOUTÉES :
-          # -r : nom du rapport HTML
-          # -w : nom du rapport texte (format Markdown/Text)
           cmd_options: '-r zap_rapport.html -w zap_rapport.txt'
 
-      # 7. Sauvegarder les rapports (Artefacts) pour téléchargement
-      # Cette étape s'exécute même si le scan trouve des failles (if: always)
+      # 8. Sauvegarder les rapports
       - name: Upload ZAP Reports
-        if: always() 
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rapports-securite-ZAP
           path: |
             zap_rapport.html
             zap_rapport.txt
+            server.log
