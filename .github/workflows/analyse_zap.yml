@@ -1,0 +1,62 @@
+name: Analyse de Sécurié avec OWASP ZAP
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  zap_scan:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    name: Scan the Web Application
+
+    steps:
+      # 1. Récupérer le code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Installer Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+
+      # 3. Installer les dépendances
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Démarrer le serveur
+      - name: Start Server
+        run: npm start &
+
+      # 5. Attendre que le serveur soit prêt
+      - name: Wait for server
+        run: |
+          npm install -g wait-on
+          npx wait-on http://localhost:3000
+
+      # 6. Lancer le scan ZAP avec génération de rapports
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'http://localhost:3000'
+          # OPTIONS AJOUTÉES :
+          # -r : nom du rapport HTML
+          # -w : nom du rapport texte (format Markdown/Text)
+          cmd_options: '-r zap_rapport.html -w zap_rapport.txt'
+
+      # 7. Sauvegarder les rapports (Artefacts) pour téléchargement
+      # Cette étape s'exécute même si le scan trouve des failles (if: always)
+      - name: Upload ZAP Reports
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapports-securite-ZAP
+          path: |
+            zap_rapport.html
+            zap_rapport.txt
