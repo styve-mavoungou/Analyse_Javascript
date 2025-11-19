@@ -1,0 +1,36 @@
+name: Analyse de sécurité avec Semgrep
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  semgrep:
+    name: Analyse SAST
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+
+    steps:
+      # 1. Récupération du code
+      - uses: actions/checkout@v3
+
+      # 2. Scan Semgrep avec génération de rapport
+      - name: Lancer Semgrep et générer le rapport
+        # --config=p/default : Utilise les règles par défaut
+        # --output=rapport_semgrep.txt : Sauvegarde le résultat dans ce fichier
+        # --text : Force le format texte (lisible par un humain)
+        run: semgrep scan --config=p/default --text --output=semgrep_rapport.txt .
+
+      # 3. Sauvegarde du rapport comme "Artefact" (Fichier téléchargeable)
+      - name: Sauvegarder le rapport d'audit
+        # 'if: always()' est CRUCIAL : permet de sauvegarder le rapport 
+        # même si Semgrep trouve des failles et fait échouer le pipeline.
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rapport-Semgrep
+          path: semgrep_rapport.txt
+          
