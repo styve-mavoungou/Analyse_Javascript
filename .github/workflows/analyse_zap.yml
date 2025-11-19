@@ -15,47 +15,45 @@ jobs:
     name: Scan Application Web
 
     steps:
-      # 1. Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Installer Node
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3. Installer les dépendances
       - name: Install dependencies
         run: npm install
 
-      # 4. Créer le dossier DB
       - name: Create DB Directory
         run: mkdir -p db
 
-      # 5. Démarrer le serveur en arrière-plan
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
-      # 6. Attendre que le port 3000 soit ouvert
       - name: Wait for server
         run: |
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # 7. Lancer ZAP (CORRECTION ICI)
       - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:3000'
-          # ✅ CORRECTION : On ajoute /zap/wrk/ devant les noms de fichiers.
-          # C'est le seul moyen pour que le fichier sorte du conteneur Docker vers GitHub.
+          # 👇👇 C'EST ICI QUE J'AI FAIT LA MODIFICATION 👇👇
+          # J'ai ajouté "/zap/wrk/" devant les noms de fichiers.
+          # C'est OBLIGATOIRE pour que le fichier sorte du conteneur.
           cmd_options: '-r /zap/wrk/zap_rapport.html -w /zap/wrk/zap_rapport.txt'
-          # ✅ AJOUT : Empêche le pipeline d'échouer (Rouge) si des failles sont trouvées
+          
+          # Empêche le rouge si des failles sont trouvées
           fail_action: false
 
-      # 8. Sauvegarder les rapports
+      # Petite astuce : On liste les fichiers pour vérifier dans les logs que le rapport est bien là
+      - name: Check files existence
+        run: ls -la
+
       - name: Upload ZAP Reports
         if: always()
         uses: actions/upload-artifact@v4
