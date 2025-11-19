@@ -1,0 +1,16 @@
+<%
+    const title = "Détails de l'étudiant";
+%>
+
+<section class="student-details-section">
+    <h2>Détails de l'étudiant</h2>
+    <div class="student-card">
+        <p><strong>Prénom:</strong> <%= student.firstname %></p>
+        <p><strong>Nom:</strong> <%= student.lastname %></p>
+        <p><strong>Email:</strong> <%= student.email %></p>
+        <p><strong>Classe:</strong> <%= student.class %></p>
+        <p><strong>Filière:</strong> <%= student.major %></p>
+        <p><strong>Date d'Inscription:</strong> <%= student.registration_date %></p>
+    </div>
+    <a href="/students" class="btn btn-secondary">Retour à la liste</a>
+</section>

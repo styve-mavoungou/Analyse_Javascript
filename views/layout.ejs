@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Étudiants - <%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <a href="/" class="navbar-brand">Gestion Étudiants</a>
+                <ul class="navbar-nav">
+                    <li><a href="/">Accueil</a></li>
+                    <li><a href="/students">Étudiants</a></li>
+                    <% if (currentUser) { %>
+                        <li><span>Bienvenue, <%= currentUser %></span></li>
+                        <li><a href="/deconnexion">Déconnexion</a></li>
+                    <% } else { %>
+                        <li><a href="/connexion">Connexion</a></li>
+                        <li><a href="/inscription">Inscription</a></li>
+                    <% } %>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <!-- C'est ici que le contenu spécifique de chaque page sera inséré -->
+        <%- body %>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Gestion Étudiants. Tous droits réservés.</p>
+        </div>
+    </footer>
+</body>
+</html>

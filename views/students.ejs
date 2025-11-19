@@ -1,0 +1,58 @@
+<%
+    const title = "Liste des étudiants";
+%>
+
+<section class="students-list-section">
+    <h2>Liste des étudiants</h2>
+
+    <% if (!currentUser) { %>
+        <div class="alert alert-info">
+            <p>Accès limité. Connectez-vous pour plus de détails.</p>
+            <a href="/connexion" class="btn btn-primary">Se connecter</a>
+            <a href="/inscription" class="btn btn-secondary">S'inscrire</a>
+        </div>
+    <% } %>
+
+    <div class="search-bar">
+        <form action="/students" method="GET">
+            <input type="text" name="search" placeholder="Rechercher un étudiant..." value="<%= search %>">
+            <button type="submit" class="btn btn-primary">Rechercher</button>
+        </form>
+    </div>
+
+    <table class="students-table">
+        <thead>
+            <tr>
+                <th>Prénom</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Classe</th>
+                <th>Filière</th>
+                <th>Date d'Inscription</th>
+                <% if (currentUser) { %>
+                    <th>Actions</th>
+                <% } %>
+            </tr>
+        </thead>
+        <tbody>
+            <% students.forEach(student => { %>
+                <tr>
+                    <td><%= student.firstname %></td>
+                    <td><%= student.lastname %></td>
+                    <td><%= student.email %></td>
+                    <td><%= student.class %></td>
+                    <td><%= student.major %></td>
+                    <td><%= student.registration_date %></td>
+                    <% if (currentUser) { %>
+                        <td><a href="/student/<%= student.id %>" class="btn btn-sm btn-info">Voir détails</a></td>
+                    <% } %>
+                </tr>
+            <% }); %>
+            <% if (students.length === 0) { %>
+                <tr>
+                    <td colspan="7">Aucun étudiant trouvé.</td>
+                </tr>
+            <% } %>
+        </tbody>
+    </table>
+</section>

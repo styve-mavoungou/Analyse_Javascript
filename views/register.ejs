@@ -1,0 +1,57 @@
+<%
+    const title = "Inscription";
+%>
+
+<div class="auth-form-container">
+    <h2>Inscription</h2>
+    <form action="/inscription" method="POST" class="auth-form">
+        <% if (error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+        <div class="form-group">
+            <label for="firstname">Prénom</label>
+            <input type="text" id="firstname" name="firstname" placeholder="Votre prénom" required>
+        </div>
+        <div class="form-group">
+            <label for="lastname">Nom</label>
+            <input type="text" id="lastname" name="lastname" placeholder="Votre nom" required>
+        </div>
+        <div class="form-group">
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" id="username" name="username" placeholder="Choisissez un nom d'utilisateur" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="Votre adresse email" required>
+        </div>
+        <div class="form-group">
+            <label for="class">Classe</label>
+            <select id="class" name="class" required>
+                <option value="Licence 1">Licence 1</option>
+                <option value="Licence 2">Licence 2</option>
+                <option value="Licence 3">Licence 3</option>
+                <option value="Master 1">Master 1</option>
+                <option value="Master 2">Master 2</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="major">Filière</label>
+            <select id="major" name="major" required>
+                <option value="Informatique">Informatique</option>
+                <option value="Génie Logiciel">Génie Logiciel</option>
+                <option value="Réseaux et Télécoms">Réseaux et Télécoms</option>
+                <option value="Science des Données">Science des Données</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" name="password" placeholder="Mot de passe" required>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password">Confirmer le mot de passe</label>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirmer le mot de passe" required>
+        </div>
+        <button type="submit" class="btn btn-primary">S'inscrire</button>
+        <p class="form-footer">Vous avez déjà un compte? <a href="/connexion">Connectez-vous</a></p>
+    </form>
+</div>

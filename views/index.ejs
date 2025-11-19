@@ -1,0 +1,32 @@
+<%
+    // Définir les variables nécessaires pour la vue
+    const title = "Accueil";
+%>
+
+<section class="hero">
+    <h1>Bienvenue sur la plateforme de Gestion des Étudiants</h1>
+    <p>Simplifiez le suivi et l'administration des informations étudiantes.</p>
+    <% if (!currentUser) { %>
+    <p>Veuillez vous connecter ou vous inscrire pour accéder aux fonctionnalités.</p>
+    <div class="hero-actions">
+        <a href="/connexion" class="btn btn-primary">Se connecter</a>
+        <a href="/inscription" class="btn btn-secondary">S'inscrire</a>
+    </div>
+    <% } %>
+</section>
+
+<section class="features">
+    <div class="feature-card">
+        <h3>Voir les étudiants</h3>
+        <p>Consultez la liste complète des étudiants inscrits.</p>
+        <a href="/students" class="btn btn-link">Voir la liste</a>
+    </div>
+    <div class="feature-card">
+        <h3>Gestion Facile</h3>
+        <p>Enregistrez et consultez les profils des étudiants en quelques clics.</p>
+    </div>
+    <div class="feature-card">
+        <h3>Accès Sécurisé</h3>
+        <p>Connexion sécurisée avec rôles utilisateur (étudiant/admin).</p>
+    </div>
+</section>
