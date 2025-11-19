@@ -1,4 +1,4 @@
-name: Analyse automatique avec OWASP ZAP
+name: Analyse de sécurité avec OWASP ZAP
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
   zap_scan:
     permissions: write-all
     runs-on: ubuntu-latest
-    name: Scan Application Web
+    name: Analyse DAST
 
     steps:
       - name: Checkout code
@@ -37,28 +37,30 @@ jobs:
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
+      # 👇👇 AJOUT CRUCIAL ICI 👇👇
+      # On donne la permission d'écriture au dossier actuel
+      # pour que ZAP puisse créer les fichiers rapports.
+      - name: Fix Permissions for ZAP
+        run: chmod -R 777 .
+
       - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:3000'
-          # 👇👇 C'EST ICI QUE J'AI FAIT LA MODIFICATION 👇👇
-          # J'ai ajouté "/zap/wrk/" devant les noms de fichiers.
-          # C'est OBLIGATOIRE pour que le fichier sorte du conteneur.
+          # Le chemin reste le bon : /zap/wrk/ pointe vers le dossier actuel
           cmd_options: '-r /zap/wrk/zap_rapport.html -w /zap/wrk/zap_rapport.txt'
-          
-          # Empêche le rouge si des failles sont trouvées
           fail_action: false
 
-      # Petite astuce : On liste les fichiers pour vérifier dans les logs que le rapport est bien là
-      - name: Check files existence
+      # 👇👇 Debug : On liste les fichiers pour voir si le rapport est là dans les logs
+      - name: Check Files (Debug)
         run: ls -la
 
       - name: Upload ZAP Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rapports-securite-ZAP
+          name: rapports_zap
           path: |
             zap_rapport.html
             zap_rapport.txt
