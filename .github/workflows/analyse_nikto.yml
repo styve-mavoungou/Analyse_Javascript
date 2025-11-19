@@ -1,0 +1,58 @@
+name: Analyse de Sécurité Nikto
+
+# Déclencheur : Quand on pousse du code sur la branche principale
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  nikto-dast-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Récupérer le code source
+      - name: Checkout du code
+        uses: actions/checkout@v3
+
+      # 2. Installer Node.js
+      - name: Installation de Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # 3. Installer les dépendances de l'application
+      - name: Installation des dépendances NPM
+        run: npm install
+
+      # 4. Installer Nikto (sur la machine virtuelle du pipeline)
+      - name: Installation de Nikto
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nikto
+
+      # 5. DÉMARRAGE DE L'APPLICATION (C'est l'étape critique)
+      # Le '&' à la fin permet de lancer le serveur en arrière-plan
+      - name: Démarrage du serveur Node.js en background
+        run: |
+          node app.js > server.log 2>&1 &
+          echo "Serveur lancé, attente de 10 secondes pour le démarrage..."
+          sleep 10
+
+      # 6. Lancer le Scan Nikto
+      # On exporte le résultat dans un fichier .txt
+      - name: Exécution du scan Nikto
+        run: |
+          nikto -h http://localhost:3000 -o nikto_rapport.txt
+        continue-on-error: true 
+        # continue-on-error permet au pipeline de continuer même si Nikto trouve des failles,
+        # sinon le pipeline s'arrête et on ne peut pas récupérer le rapport.
+
+      # 7. Sauvegarder le rapport comme "Artefact"
+      # Cela permet de télécharger le rapport depuis l'interface GitHub
+      - name: Sauvegarder le rapport de scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-nikto
+          path: nikto_rapport.txt
