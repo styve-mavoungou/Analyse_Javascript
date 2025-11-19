@@ -64,4 +64,4 @@ jobs:
           path: |
             zap_rapport.html
             zap_rapport.txt
-            server.log
+            
