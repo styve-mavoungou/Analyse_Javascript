@@ -1,4 +1,4 @@
-name: Analyse de sécurité avec Semgrep
+name: Analyse de Sécurité avec Semgrep
 
 on:
   push:
