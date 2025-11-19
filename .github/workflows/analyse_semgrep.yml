@@ -8,7 +8,7 @@ on:
 
 jobs:
   semgrep:
-    name: Analyse SAST
+    name: Analyse SAST automatique
     runs-on: ubuntu-latest
     container:
       image: returntocorp/semgrep
@@ -31,6 +31,6 @@ jobs:
         if: always() 
         uses: actions/upload-artifact@v4
         with:
-          name: Rapport-Semgrep
+          name: rapport_semgrep_javascript
           path: semgrep_rapport.txt
           
