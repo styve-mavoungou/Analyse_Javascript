@@ -1,77 +1,61 @@
-name: Analyse de sécurité avec OWASP ZAP
+name: Analyse OWASP ZAP (Solution Stable)
 
 on:
   push:
-    branches: 
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   zap_scan:
-    permissions: write-all
     runs-on: ubuntu-latest
-    name: Analyse DAST OWASP ZAP
 
     steps:
 
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Create DB Directory
-        run: mkdir -p db
+      - name: Install Dependencies
+        run: |
+          npm install
+          mkdir -p db
 
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
       - name: Wait for server
         run: |
-          npm install -g wait-on
-          npx wait-on -t 60000 http://localhost:3000
+          echo "Attente du serveur..."
+          sleep 10
+          curl -I http://localhost:3000
 
-      - name: Test Server (Host)
-        run: curl -I http://localhost:3000
-
-      # 🔥 TEST ESSENTIEL : depuis Docker !
-      - name: Test server from Docker
+      # ————————————————
+      # 💥 INSTALLATION DE ZAP CLI
+      # ————————————————
+      - name: Install ZAP
         run: |
-          docker run --network host curlimages/curl \
-          curl -I http://localhost:3000 || echo "ECHEC DOCKER"
+          sudo apt update
+          sudo apt install -y snapd
+          sudo snap install zaproxy --classic
 
-      - name: Prepare Host Permissions
-        run: chmod -R 777 $(pwd)
-
-      # 🔥 Correctif final : donner les droits *dans* Docker + utiliser host networking
+      # ————————————————
+      # 📌 EXECUTION DU SCAN
+      # ————————————————
       - name: Run ZAP Baseline Scan
         run: |
-          docker run --network host -u 0 \
-            -v $(pwd):/zap/wrk/:rw \
-            owasp/zap2docker-stable \
-            /bin/bash -c "chmod -R 777 /zap/wrk && \
-            zap-baseline.py \
-              -t http://localhost:3000 \
-              -r zap_rapport.html \
-              -w zap_rapport.txt \
-              -I" || true
+          zap.sh -cmd -quickurl http://localhost:3000 \
+            -quickprogress \
+            -quickout zap_rapport.html
 
-      - name: Check Generated Files
-        run: ls -la
-
-      - name: Upload ZAP Reports
-        if: always()
+      - name: Upload Reports
         uses: actions/upload-artifact@v4
         with:
           name: rapports_zap
           path: |
             zap_rapport.html
-            zap_rapport.txt
             server.log
