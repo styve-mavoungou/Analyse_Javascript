@@ -12,7 +12,7 @@ jobs:
   zap_scan:
     permissions: write-all
     runs-on: ubuntu-latest
-    name: Analyse DAST OWASP ZAP
+    name: Analyse DAST
 
     steps:
       - name: Checkout code
@@ -29,30 +29,38 @@ jobs:
       - name: Create DB Directory
         run: mkdir -p db
 
+      # Démarrage du serveur
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
+      # Attente du port
       - name: Wait for server
         run: |
           npm install -g wait-on
-          npx wait-on -t 60000 http://localhost:3000
+          npx wait-on -t 60000 http://127.0.0.1:3000
 
-      - name: Test Server Connectivity (host)
-        run: curl -I http://localhost:3000
+      # Préparation des permissions (Lecture/Ecriture pour tout le monde)
+      - name: Fix Permissions
+        run: chmod -R 777 .
 
-      - name: Run ZAP Baseline
+      # Lancement de ZAP via Docker (COMMANDE CORRIGÉE)
+      # 1. --network host : Pour accéder au localhost du runner
+      # 2. -v ${{ github.workspace }}:/zap/wrk/:rw : MAPPAGE ABSOLU (La clé du succès)
+      # 3. -u 0 : Mode Root pour forcer l'écriture
+      - name: Run ZAP
         run: |
-          docker run --add-host=host.docker.internal:host-gateway \
-          -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable \
-          zap-baseline.py \
-            -t http://host.docker.internal:3000 \
-            -r zap_rapport.html \
-            -w zap_rapport.txt \
-            -I || true
+          docker run --rm --network host -u 0 -v ${{ github.workspace }}:/zap/wrk/:rw owasp/zap2docker-stable zap-baseline.py \
+          -t http://127.0.0.1:3000 \
+          -r zap_rapport.html \
+          -w zap_rapport.txt \
+          -I \
+          || true
 
-      - name: Check Files
+      # Debug : Lister les fichiers pour prouver qu'ils sont là
+      - name: List files (Debug)
         run: ls -la
 
+      # Sauvegarde
       - name: Upload ZAP Reports
         if: always()
         uses: actions/upload-artifact@v4
