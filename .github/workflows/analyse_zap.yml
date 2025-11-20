@@ -1,61 +1,67 @@
-name: Analyse OWASP ZAP (Solution Stable)
+name: Analyse de sécurité avec OWASP ZAP
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   zap_scan:
+    permissions: write-all
     runs-on: ubuntu-latest
+    name: Analyse DAST
 
     steps:
-
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          mkdir -p db
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create DB Directory
+        run: mkdir -p db
 
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
       - name: Wait for server
         run: |
-          echo "Attente du serveur..."
-          sleep 10
-          curl -I http://localhost:3000
+          npm install -g wait-on
+          npx wait-on -t 60000 http://localhost:3000
 
-      # ————————————————
-      # 💥 INSTALLATION DE ZAP CLI
-      # ————————————————
-      - name: Install ZAP
+      # On prépare les droits (au cas où)
+      - name: Fix Permissions
+        run: chmod -R 777 .
+
+      # Lancement de ZAP via Docker
+      # CORRECTION ICI : On ajoute /zap/wrk/ devant les noms de fichiers
+      - name: Run ZAP
         run: |
-          sudo apt update
-          sudo apt install -y snapd
-          sudo snap install zaproxy --classic
+          docker run --rm --network host -u 0 -v ${{ github.workspace }}:/zap/wrk/:rw owasp/zap2docker-stable zap-baseline.py \
+          -t http://localhost:3000 \
+          -r /zap/wrk/zap_rapport.html \
+          -w /zap/wrk/zap_rapport.txt \
+          -I \
+          || true
 
-      # ————————————————
-      # 📌 EXECUTION DU SCAN
-      # ————————————————
-      - name: Run ZAP Baseline Scan
-        run: |
-          zap.sh -cmd -quickurl http://localhost:3000 \
-            -quickprogress \
-            -quickout zap_rapport.html
+      # Debug : On liste pour prouver que les fichiers sont bien là
+      - name: Check Files
+        run: ls -la
 
-      - name: Upload Reports
+      - name: Upload ZAP Reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rapports_zap
           path: |
             zap_rapport.html
+            zap_rapport.txt
             server.log
