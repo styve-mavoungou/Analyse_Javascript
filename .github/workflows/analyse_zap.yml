@@ -37,22 +37,18 @@ jobs:
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # Création des fichiers vides pour recevoir les rapports
-      - name: Create Report Files
-        run: |
-          touch zap_rapport.html
-          touch zap_rapport.txt
-          chmod 666 zap_rapport.html
-          chmod 666 zap_rapport.txt
+      # On prépare les droits du dossier (très important)
+      - name: Fix Permissions
+        run: chmod -R 777 .
 
-      # Lancement de ZAP avec le NOUVEAU NOM D'IMAGE
+      # Lancement de ZAP (CONFIGURATION CORRECTE)
+      # 1. -v ${{ github.workspace }}:/zap/wrk/:rw  -> On mappe tout le dossier de travail vers /zap/wrk/
+      # 2. -r zap_rapport.html -> On donne juste le nom. Le script ZAP le mettra automatiquement dans /zap/wrk/
       - name: Run ZAP Scan
         run: |
-          # CORRECTION ICI : On utilise 'zaproxy/zap-stable' au lieu de 'owasp/zap2docker-stable'
           docker run --rm --network host \
             -u 0 \
-            -v $(pwd)/zap_rapport.html:/zap/wrk/zap_rapport.html \
-            -v $(pwd)/zap_rapport.txt:/zap/wrk/zap_rapport.txt \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
             zaproxy/zap-stable zap-baseline.py \
             -t http://localhost:3000 \
             -r zap_rapport.html \
@@ -63,8 +59,10 @@ jobs:
       # Vérification (Debug)
       - name: Check Report Size
         run: |
-          ls -lh zap_rapport.html
-          ls -lh zap_rapport.txt
+          echo "--- LISTING DES FICHIERS ---"
+          ls -la
+          echo "--- TAILLE RAPPORT HTML ---"
+          ls -lh zap_rapport.html || echo "Fichier HTML absent"
 
       - name: Upload ZAP Reports
         if: always()
