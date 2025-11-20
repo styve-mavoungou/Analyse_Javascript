@@ -29,39 +29,30 @@ jobs:
       - name: Create DB Directory
         run: mkdir -p db
 
-      # Serveur en arrière-plan
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
-      # Attente du port 3000
       - name: Wait for server
         run: |
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # Vérification
-      - name: Test Server Connectivity
+      - name: Test Server Connectivity (host)
         run: curl -I http://localhost:3000
 
-      # Permissions côté hôte
-      - name: Prepare Permissions
-        run: chmod -R 777 $(pwd)
-
-      # 🚀 Correctif principal : chmod *dans* le conteneur Docker
-      - name: Run ZAP (Root Mode)
+      - name: Run ZAP Baseline
         run: |
-          docker run --network host -u 0 -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable \
-          /bin/bash -c "chmod -R 777 /zap/wrk && zap-baseline.py \
-            -t http://localhost:3000 \
+          docker run --add-host=host.docker.internal:host-gateway \
+          -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable \
+          zap-baseline.py \
+            -t http://host.docker.internal:3000 \
             -r zap_rapport.html \
             -w zap_rapport.txt \
-            -I" || true
+            -I || true
 
-      # Debug : vérifier les fichiers générés
-      - name: Check Files Size
+      - name: Check Files
         run: ls -la
 
-      # Upload des rapports
       - name: Upload ZAP Reports
         if: always()
         uses: actions/upload-artifact@v4
