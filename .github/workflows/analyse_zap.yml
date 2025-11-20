@@ -1,63 +1,56 @@
-name: Analyse de sécurité avec OWASP ZAP
+name: Analyse OWASP ZAP (Stable & Fonctionnel)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   zap_scan:
-    permissions: write-all
     runs-on: ubuntu-latest
-    name: Analyse DAST
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Create DB Directory
-        run: mkdir -p db
+      - name: Install Dependencies
+        run: |
+          npm install
+          mkdir -p db
 
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
       - name: Wait for server
         run: |
-          npm install -g wait-on
-          npx wait-on -t 60000 http://localhost:3000
+          echo "Attente du serveur..."
+          sleep 10
+          curl -I http://localhost:3000
 
-      # On prépare les droits (au cas où)
-      - name: Fix Permissions
-        run: chmod -R 777 .
-
-      # Lancement de ZAP via Docker
-      # CORRECTION ICI : On ajoute /zap/wrk/ devant les noms de fichiers
-      - name: Run ZAP
+      # ——————————————————
+      # INSTALLATION OFFICIELLE ZAP CLI
+      # ——————————————————
+      - name: Download OWASP ZAP
         run: |
-          docker run --rm --network host -u 0 -v ${{ github.workspace }}:/zap/wrk/:rw owasp/zap2docker-stable zap-baseline.py \
-          -t http://localhost:3000 \
-          -r /zap/wrk/zap_rapport.html \
-          -w /zap/wrk/zap_rapport.txt \
-          -I \
-          || true
+          wget https://github.com/zaproxy/zaproxy/releases/download/v2.15.0/ZAP_2.15.0_Linux.tar.gz
+          tar -xvzf ZAP_2.15.0_Linux.tar.gz
+          ls -la
 
-      # Debug : On liste pour prouver que les fichiers sont bien là
-      - name: Check Files
-        run: ls -la
+      - name: Run ZAP Baseline Scan
+        run: |
+          ./ZAP_2.15.0/zap-baseline.py \
+            -t http://localhost:3000 \
+            -r zap_rapport.html \
+            -w zap_rapport.txt \
+            -I || true
 
       - name: Upload ZAP Reports
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rapports_zap
