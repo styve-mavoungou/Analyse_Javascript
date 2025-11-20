@@ -37,22 +37,28 @@ jobs:
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # 👇👇 AJOUT CRUCIAL ICI 👇👇
-      # On donne la permission d'écriture au dossier actuel
-      # pour que ZAP puisse créer les fichiers rapports.
-      - name: Fix Permissions for ZAP
-        run: chmod -R 777 .
+      # 👇👇 LA CORRECTION EST ICI 👇👇
+      # 1. On crée les fichiers vides (touch)
+      # 2. On donne les permissions maximales (chmod 777)
+      # Ainsi, ZAP n'a pas besoin de "créer", il n'a plus qu'à "remplir".
+      - name: Prepare ZAP Report Files
+        run: |
+          touch zap_rapport.html
+          touch zap_rapport.txt
+          chmod 777 zap_rapport.html
+          chmod 777 zap_rapport.txt
+          chmod -R 777 .
 
       - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:3000'
-          # Le chemin reste le bon : /zap/wrk/ pointe vers le dossier actuel
+          # On pointe bien vers les fichiers qu'on vient de créer
           cmd_options: '-r /zap/wrk/zap_rapport.html -w /zap/wrk/zap_rapport.txt'
           fail_action: false
 
-      # 👇👇 Debug : On liste les fichiers pour voir si le rapport est là dans les logs
+      # Debug : Pour vérifier la taille des fichiers (s'ils font 0 octet, c'est que ZAP a échoué)
       - name: Check Files (Debug)
         run: ls -la
 
@@ -64,4 +70,4 @@ jobs:
           path: |
             zap_rapport.html
             zap_rapport.txt
-            
+            server.log
