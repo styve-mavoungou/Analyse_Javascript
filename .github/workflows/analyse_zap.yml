@@ -1,56 +1,85 @@
-name: Analyse OWASP ZAP (Stable & Fonctionnel)
+name: Analyse de sécurité avec OWASP ZAP
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   zap_scan:
+    permissions: write-all
     runs-on: ubuntu-latest
+    name: Analyse DAST
 
     steps:
-      - name: Checkout
+      # 1. Récupération du code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      # 2. Installation Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          mkdir -p db
+      # 3. Installation des dépendances
+      - name: Install dependencies
+        run: npm install
 
+      # 4. Création dossier DB
+      - name: Create DB Directory
+        run: mkdir -p db
+
+      # 5. Démarrage serveur (Méthode standard)
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
+      # 6. Attente serveur
       - name: Wait for server
         run: |
-          echo "Attente du serveur..."
-          sleep 10
-          curl -I http://localhost:3000
+          npm install -g wait-on
+          npx wait-on -t 60000 http://localhost:3000
 
-      # ——————————————————
-      # INSTALLATION OFFICIELLE ZAP CLI
-      # ——————————————————
-      - name: Download OWASP ZAP
+      # 7. PRÉPARATION CHIRURGICALE DES FICHIERS
+      # On crée physiquement les fichiers AVANT Docker.
+      - name: Create Report Files
         run: |
-          wget https://github.com/zaproxy/zaproxy/releases/download/v2.15.0/ZAP_2.15.0_Linux.tar.gz
-          tar -xvzf ZAP_2.15.0_Linux.tar.gz
-          ls -la
+          touch zap_rapport.html
+          touch zap_rapport.txt
+          chmod 666 zap_rapport.html
+          chmod 666 zap_rapport.txt
 
-      - name: Run ZAP Baseline Scan
+      # 8. SCAN ZAP (MAPPING FICHIER PAR FICHIER)
+      # -v $(pwd)/zap_rapport.html:/zap/wrk/zap_rapport.html : On relie le fichier ext au fichier int.
+      # > zap.log : On capture tout ce que ZAP dit pour comprendre s'il plante.
+      - name: Run ZAP Scan
         run: |
-          ./ZAP_2.15.0/zap-baseline.py \
+          docker run --rm --network host \
+            -u 0 \
+            -v $(pwd)/zap_rapport.html:/zap/wrk/zap_rapport.html \
+            -v $(pwd)/zap_rapport.txt:/zap/wrk/zap_rapport.txt \
+            owasp/zap2docker-stable zap-baseline.py \
             -t http://localhost:3000 \
             -r zap_rapport.html \
             -w zap_rapport.txt \
-            -I || true
+            -I \
+            > zap.log 2>&1 || true
 
+      # 9. VÉRIFICATION VISUELLE (DEBUG)
+      # Cette étape va nous dire dans la console GitHub si les fichiers ont une taille > 0
+      - name: Check Report Size
+        run: |
+          echo "Taille du rapport HTML :"
+          ls -lh zap_rapport.html
+          echo "Taille du rapport TXT :"
+          ls -lh zap_rapport.txt
+
+      # 10. Sauvegarde (On prend aussi le zap.log pour le debug)
       - name: Upload ZAP Reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rapports_zap
@@ -58,3 +87,4 @@ jobs:
             zap_rapport.html
             zap_rapport.txt
             server.log
+            zap.log
