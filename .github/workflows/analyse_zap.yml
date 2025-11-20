@@ -15,36 +15,29 @@ jobs:
     name: Analyse DAST
 
     steps:
-      # 1. Récupération du code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Installation Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3. Installation des dépendances
       - name: Install dependencies
         run: npm install
 
-      # 4. Création dossier DB
       - name: Create DB Directory
         run: mkdir -p db
 
-      # 5. Démarrage serveur (Méthode standard)
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
-      # 6. Attente serveur
       - name: Wait for server
         run: |
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # 7. PRÉPARATION CHIRURGICALE DES FICHIERS
-      # On crée physiquement les fichiers AVANT Docker.
+      # Création des fichiers vides pour recevoir les rapports
       - name: Create Report Files
         run: |
           touch zap_rapport.html
@@ -52,32 +45,27 @@ jobs:
           chmod 666 zap_rapport.html
           chmod 666 zap_rapport.txt
 
-      # 8. SCAN ZAP (MAPPING FICHIER PAR FICHIER)
-      # -v $(pwd)/zap_rapport.html:/zap/wrk/zap_rapport.html : On relie le fichier ext au fichier int.
-      # > zap.log : On capture tout ce que ZAP dit pour comprendre s'il plante.
+      # Lancement de ZAP avec le NOUVEAU NOM D'IMAGE
       - name: Run ZAP Scan
         run: |
+          # CORRECTION ICI : On utilise 'zaproxy/zap-stable' au lieu de 'owasp/zap2docker-stable'
           docker run --rm --network host \
             -u 0 \
             -v $(pwd)/zap_rapport.html:/zap/wrk/zap_rapport.html \
             -v $(pwd)/zap_rapport.txt:/zap/wrk/zap_rapport.txt \
-            owasp/zap2docker-stable zap-baseline.py \
+            zaproxy/zap-stable zap-baseline.py \
             -t http://localhost:3000 \
             -r zap_rapport.html \
             -w zap_rapport.txt \
             -I \
             > zap.log 2>&1 || true
 
-      # 9. VÉRIFICATION VISUELLE (DEBUG)
-      # Cette étape va nous dire dans la console GitHub si les fichiers ont une taille > 0
+      # Vérification (Debug)
       - name: Check Report Size
         run: |
-          echo "Taille du rapport HTML :"
           ls -lh zap_rapport.html
-          echo "Taille du rapport TXT :"
           ls -lh zap_rapport.txt
 
-      # 10. Sauvegarde (On prend aussi le zap.log pour le debug)
       - name: Upload ZAP Reports
         if: always()
         uses: actions/upload-artifact@v4
