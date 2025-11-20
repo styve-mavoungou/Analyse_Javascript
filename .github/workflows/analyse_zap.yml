@@ -29,37 +29,37 @@ jobs:
       - name: Create DB Directory
         run: mkdir -p db
 
+      # On lance le serveur
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
+      # On attend que le serveur soit prêt (via localhost car on est sur l'hôte)
       - name: Wait for server
         run: |
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # 👇👇 LA CORRECTION EST ICI 👇👇
-      # 1. On crée les fichiers vides (touch)
-      # 2. On donne les permissions maximales (chmod 777)
-      # Ainsi, ZAP n'a pas besoin de "créer", il n'a plus qu'à "remplir".
-      - name: Prepare ZAP Report Files
-        run: |
-          touch zap_rapport.html
-          touch zap_rapport.txt
-          chmod 777 zap_rapport.html
-          chmod 777 zap_rapport.txt
-          chmod -R 777 .
+      # 1. On donne les permissions maximales au dossier
+      # ZAP pourra ainsi créer les fichiers lui-même.
+      - name: Fix Permissions
+        run: chmod -R 777 .
 
+      # 2. Lancement du Scan
       - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'http://localhost:3000'
-          # On pointe bien vers les fichiers qu'on vient de créer
+          # 👇👇 MODIFICATION CRUCIALE 👇👇
+          # On remplace 'localhost' par '172.17.0.1'
+          # C'est l'IP du Runner GitHub vue depuis le conteneur Docker ZAP
+          target: 'http://172.17.0.1:3000'
+          
+          # On garde les chemins /zap/wrk/
           cmd_options: '-r /zap/wrk/zap_rapport.html -w /zap/wrk/zap_rapport.txt'
           fail_action: false
 
-      # Debug : Pour vérifier la taille des fichiers (s'ils font 0 octet, c'est que ZAP a échoué)
-      - name: Check Files (Debug)
+      # Debug : Vérification de la taille des fichiers (ils ne doivent pas être à 0)
+      - name: Check Files Size
         run: ls -la
 
       - name: Upload ZAP Reports
