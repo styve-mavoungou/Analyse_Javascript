@@ -12,7 +12,7 @@ jobs:
   zap_scan:
     permissions: write-all
     runs-on: ubuntu-latest
-    name: Analyse DAST
+    name: Analyse DAST OWASP ZAP
 
     steps:
       - name: Checkout code
@@ -37,13 +37,9 @@ jobs:
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # On prépare les droits du dossier (très important)
       - name: Fix Permissions
         run: chmod -R 777 .
 
-      # Lancement de ZAP (CONFIGURATION CORRECTE)
-      # 1. -v ${{ github.workspace }}:/zap/wrk/:rw  -> On mappe tout le dossier de travail vers /zap/wrk/
-      # 2. -r zap_rapport.html -> On donne juste le nom. Le script ZAP le mettra automatiquement dans /zap/wrk/
       - name: Run ZAP Scan
         run: |
           docker run --rm --network host \
@@ -56,7 +52,6 @@ jobs:
             -I \
             > zap.log 2>&1 || true
 
-      # Vérification (Debug)
       - name: Check Report Size
         run: |
           echo "--- LISTING DES FICHIERS ---"
@@ -68,7 +63,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: rapports_zap
+          name: rapport_zap
           path: |
             zap_rapport.html
             zap_rapport.txt
