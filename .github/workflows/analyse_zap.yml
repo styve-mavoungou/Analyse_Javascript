@@ -29,40 +29,38 @@ jobs:
       - name: Create DB Directory
         run: mkdir -p db
 
-      # Démarrage du serveur (inchangé)
+      # Serveur en arrière-plan
       - name: Start Server
         run: nohup npm start > server.log 2>&1 &
 
-      # Attente (inchangé)
+      # Attente du port 3000
       - name: Wait for server
         run: |
           npm install -g wait-on
           npx wait-on -t 60000 http://localhost:3000
 
-      # 1. PRÉPARATION DES FICHIERS
-      # On crée les fichiers vides et on donne les droits (777)
-      # pour être sûr à 100% que Docker puisse écrire dedans.
-      - name: Prepare Report Files
-        run: |
-          touch zap_rapport.html
-          touch zap_rapport.txt
-          chmod 666 zap_rapport.html
-          chmod 666 zap_rapport.txt
-          chmod -R 777 .
+      # Verification que le serveur répond bien (Debug)
+      - name: Test Server Connectivity
+        run: curl -I http://localhost:3000
 
-      # 2. LANCEMENT MANUEL DE DOCKER (LA SOLUTION)
-      # --network host : ZAP partage le réseau du serveur (voit localhost:3000)
-      # -v $(pwd):/zap/wrk/:rw : On partage le dossier courant avec ZAP
-      # || true : Empêche le pipeline d'échouer si des failles sont trouvées
-      - name: Run ZAP via Docker directly
+      # 1. On ouvre les droits du dossier courant
+      - name: Prepare Permissions
+        run: chmod -R 777 .
+
+      # 2. LANCEMENT DOCKER EN MODE ROOT (-u 0)
+      # --network host : Pour voir localhost:3000
+      # -u 0 : Pour écrire les fichiers en tant que ROOT (force l'écriture)
+      # -v $(pwd):/zap/wrk/:rw : Montage du dossier
+      - name: Run ZAP (Root Mode)
         run: |
-          docker run --network host -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py \
+          docker run --network host -u 0 -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py \
           -t http://localhost:3000 \
           -r zap_rapport.html \
           -w zap_rapport.txt \
+          -I \
           || true
 
-      # Debug : Vérification (les fichiers ne devraient plus être vides)
+      # Debug : Liste les fichiers avec leur taille
       - name: Check Files Size
         run: ls -la
 
